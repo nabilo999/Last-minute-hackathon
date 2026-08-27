@@ -1,12 +1,16 @@
-import { CHARACTER_ASSETS } from '../data/assets.js'
+import { getCharacterAsset } from '../data/assets.js'
 
 function SuspectCard({ suspect, onAsk, onVote, canAsk }) {
-  const asset = CHARACTER_ASSETS[suspect.assetKey] ?? CHARACTER_ASSETS.unknown
+  const asset = getCharacterAsset(suspect.assetKey)
 
   return (
     <article className={`suspect-card ${suspect.isEliminated ? 'is-eliminated' : ''}`}>
       <div className={`asset-box asset-${suspect.assetKey}`}>
-        <span>{asset.label}</span>
+        {asset.imageUrl ? (
+          <img src={asset.imageUrl} alt={asset.label} />
+        ) : (
+          <span>{asset.label}</span>
+        )}
       </div>
       <div className="suspect-details">
         <p className="eyebrow">{suspect.role}</p>

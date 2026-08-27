@@ -1,87 +1,158 @@
-export const mockMystery = {
-  setting: {
+const firstNames = [
+  'Antoine',
+  'Beatrice',
+  'Clara',
+  'Dorian',
+  'Evelyn',
+  'Felix',
+  'Iris',
+  'Miles',
+  'Priya',
+  'Vivian',
+]
+
+const lastNames = [
+  'Vale',
+  'Graves',
+  'Morrow',
+  'Blackwell',
+  'Voss',
+  'Sterling',
+  'Hale',
+  'Ashcroft',
+]
+
+const placeDetails = {
+  mansion: {
     title: 'Midnight at Marlowe Manor',
-    description:
-      'A storm pins every guest inside an old hilltop estate during a charity dinner. When the lights fail for seven minutes, the host is found dead beside the locked conservatory doors.',
+    scene:
+      'A storm pins every guest inside an old hilltop estate during a private dinner.',
+    clueObject: 'silver conservatory key',
+    clueLocation: 'conservatory',
+    clueDetail: 'crushed basil from the broken planter',
   },
-  victim: {
-    name: 'Eleanor Marlowe',
-    details:
-      'Heiress, donor, and keeper of every guest list in town. She had promised to announce a shocking change to her will before dessert.',
-    lastSeen:
-      'Last seen alive at 9:12 PM carrying a silver key toward the conservatory.',
-  },
-  secretMurdererId: 'suspect_4',
-  hiddenSolutionLogic:
-    'Vivian claims she never entered the conservatory, but she mentions the scent of crushed basil from inside the room before anyone else describes it.',
-  solutionExplanation:
-    'Vivian confessed after her timeline collapsed. She said she stayed in the ballroom, yet knew the conservatory smelled of crushed basil after the planter was knocked over during the attack. That detail was only available to someone who had been inside with Eleanor.',
-  suspects: [
-    {
-      id: 'suspect_1',
-      name: 'Chef Antoine',
-      role: 'Head Chef',
-      assetKey: 'chef',
-      initialStatement: 'I was in the kitchen preparing the soup all evening.',
-      secretMotive: "He broke Eleanor's antique serving plates during an argument.",
-      isKiller: false,
-      isEliminated: false,
-    },
-    {
-      id: 'suspect_2',
-      name: 'Miles Graves',
-      role: 'Butler',
-      assetKey: 'butler',
-      initialStatement: 'I was polishing glassware in the pantry when the lights failed.',
-      secretMotive: 'He was selling gossip about the family to a tabloid.',
-      isKiller: false,
-      isEliminated: false,
-    },
-    {
-      id: 'suspect_3',
-      name: 'Dr. Priya Voss',
-      role: 'Family Doctor',
-      assetKey: 'doctor',
-      initialStatement: 'I was checking on an elderly guest near the library.',
-      secretMotive: 'She concealed that Eleanor was changing doctors over missing pills.',
-      isKiller: false,
-      isEliminated: false,
-    },
-    {
-      id: 'suspect_4',
-      name: 'Vivian Vale',
-      role: 'Socialite',
-      assetKey: 'socialite',
-      initialStatement:
-        'I stayed in the ballroom the entire blackout and never went near the conservatory.',
-      secretMotive:
-        "She was being cut from Eleanor's will and killed to keep her debts hidden.",
-      isKiller: true,
-      isEliminated: false,
-    },
-  ],
 }
 
-export function createMockInterviewAnswer(suspect, question) {
+const characterRoles = {
+  butler: 'Butler',
+  chef: 'Head Chef',
+  doctor: 'Family Doctor',
+  gardener: 'Estate Gardener',
+  gardner: 'Estate Gardener',
+  socialite: 'Socialite',
+}
+
+function pickRandom(items) {
+  return items[Math.floor(Math.random() * items.length)]
+}
+
+function shuffle(items) {
+  return [...items].sort(() => Math.random() - 0.5)
+}
+
+function roleForAsset(asset) {
+  return characterRoles[asset.key] ?? asset.label
+}
+
+function nameForAsset(asset, index) {
+  return `${firstNames[(index + Math.floor(Math.random() * firstNames.length)) % firstNames.length]} ${pickRandom(lastNames)}`
+}
+
+function getPlaceStory(placeAsset) {
+  const fallback = {
+    title: `The ${placeAsset.label} Murder`,
+    scene: `A private gathering at the ${placeAsset.label.toLowerCase()} turns deadly before midnight.`,
+    clueObject: 'missing brass token',
+    clueLocation: placeAsset.label.toLowerCase(),
+    clueDetail: 'fresh mud on the floor',
+  }
+
+  return placeDetails[placeAsset.key] ?? fallback
+}
+
+export function createLocalMystery(assetPool) {
+  if (assetPool.places.length < 1) {
+    throw new Error('Add at least one image to src/assets/places.')
+  }
+
+  if (assetPool.characters.length < 4) {
+    throw new Error('Add at least four character images to src/assets/characters.')
+  }
+
+  const placeAsset = pickRandom(assetPool.places)
+  const selectedCharacters = shuffle(assetPool.characters).slice(0, 4)
+  const killerIndex = Math.floor(Math.random() * selectedCharacters.length)
+  const placeStory = getPlaceStory(placeAsset)
+  const victimName = `${pickRandom(firstNames)} ${pickRandom(lastNames)}`
+
+  const suspects = selectedCharacters.map((asset, index) => {
+    const isKiller = index === killerIndex
+    const role = roleForAsset(asset)
+    const name = nameForAsset(asset, index)
+
+    return {
+      id: `suspect_${index + 1}`,
+      name,
+      role,
+      assetKey: asset.key,
+      initialStatement: isKiller
+        ? `I never went near the ${placeStory.clueLocation}; I stayed with the other guests the whole time.`
+        : `I was handling my ${role.toLowerCase()} duties when the alarm was raised.`,
+      secretMotive: isKiller
+        ? `They feared ${victimName} would expose a debt tied to the ${placeStory.clueObject}.`
+        : `They were hiding a private embarrassment connected to their work as the ${role.toLowerCase()}.`,
+      isKiller,
+      isEliminated: false,
+    }
+  })
+
+  const killer = suspects[killerIndex]
+
+  return {
+    setting: {
+      title: placeStory.title,
+      description: `${placeStory.scene} When the lights fail for seven minutes, ${victimName} is found dead and everyone has something to hide.`,
+      assetKey: placeAsset.key,
+    },
+    victim: {
+      name: victimName,
+      details:
+        'The victim was preparing to reveal a secret that would ruin one person in the room.',
+      lastSeen: `Last seen carrying the ${placeStory.clueObject} toward the ${placeStory.clueLocation}.`,
+    },
+    secretMurdererId: killer.id,
+    hiddenSolutionLogic: `${killer.name} says they avoided the ${placeStory.clueLocation}, but can describe ${placeStory.clueDetail}.`,
+    solutionExplanation: `${killer.name} was caught by one impossible detail: they claimed they never entered the ${placeStory.clueLocation}, yet knew about ${placeStory.clueDetail}. Only the killer could have noticed that during the attack.`,
+    suspects,
+  }
+}
+
+export function createMockInterviewAnswer(suspect, question, storyData) {
   const lowerQuestion = question.toLowerCase()
+  const clueLocation = storyData?.hiddenSolutionLogic?.match(/avoided the ([^,]+)/)?.[1]
+  const solutionDetail = storyData?.hiddenSolutionLogic?.split('but can describe ')[1]
 
-  if (suspect.isKiller && /conservatory|smell|basil|plant|key/.test(lowerQuestion)) {
-    return 'The conservatory? I never entered it. I only heard later about that awful basil smell from the broken planter. People were talking, I suppose.'
+  if (
+    suspect.isKiller &&
+    (lowerQuestion.includes(clueLocation ?? 'conservatory') ||
+      /clue|detail|smell|mud|key|token|plant|floor/.test(lowerQuestion))
+  ) {
+    return `I never went there. I only heard later about ${solutionDetail ?? 'that odd detail'}. People talk when they panic.`
   }
 
-  if (suspect.isKiller && /where|time|blackout|lights/.test(lowerQuestion)) {
-    return 'I was in the ballroom when the lights went out. Many people were moving around, so I cannot be expected to account for every second.'
+  if (suspect.isKiller && /where|time|blackout|lights|when/.test(lowerQuestion)) {
+    return 'I stayed with the others during the blackout. It was chaos, so no one can expect a perfect timeline.'
   }
 
-  if (/motive|secret|argument|hide/.test(lowerQuestion)) {
-    return `Fine. I was worried about ${suspect.secretMotive.toLowerCase()} But that does not make me a murderer.`
+  if (/motive|secret|argument|hide|debt|embarrass/.test(lowerQuestion)) {
+    return `Fine. I was worried because ${suspect.secretMotive.toLowerCase()} But that does not make me a murderer.`
   }
 
-  if (/victim|eleanor|will/.test(lowerQuestion)) {
-    return 'Eleanor had a talent for making everyone feel exposed. I was upset with her, yes, but she was alive the last time I saw her.'
+  if (/victim|will|reveal|secret/.test(lowerQuestion)) {
+    return 'They had a talent for making people feel exposed. I was upset, yes, but they were alive the last time I saw them.'
   }
 
   return suspect.isKiller
     ? 'I already told you what happened. You should spend your questions on someone with a real reason to panic.'
-    : 'I was frightened and embarrassed, but I did not hurt Eleanor. My secret is ugly, not deadly.'
+    : 'I was frightened and embarrassed, but I did not hurt anyone. My secret is ugly, not deadly.'
 }

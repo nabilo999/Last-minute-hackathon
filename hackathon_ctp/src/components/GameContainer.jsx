@@ -3,8 +3,8 @@ import EndScreen from './EndScreen.jsx'
 import QuestionModal from './QuestionModal.jsx'
 import StoryIntro from './StoryIntro.jsx'
 import SuspectGrid from './SuspectGrid.jsx'
-import { AVAILABLE_ASSET_KEYS } from '../data/assets.js'
-import { createMockInterviewAnswer, mockMystery } from '../data/mockMystery.js'
+import { ASSET_POOL, getPlaceAsset } from '../data/assets.js'
+import { createLocalMystery, createMockInterviewAnswer } from '../data/mockMystery.js'
 import { askSuspect, generateStory } from '../services/aiClient.js'
 
 const STARTING_QUESTIONS = 5
@@ -39,7 +39,7 @@ function GameContainer() {
     setGameState({ ...createInitialState(), phase: 'LOADING' })
 
     try {
-      const story = await generateStory(AVAILABLE_ASSET_KEYS)
+      const story = await generateStory(ASSET_POOL)
       setGameState({
         phase: 'INTRO',
         storyData: story,
@@ -49,17 +49,22 @@ function GameContainer() {
       })
       setStatusMessage('')
     } catch (error) {
-      const fallbackStory = structuredClone(mockMystery)
-      setGameState({
-        phase: 'INTRO',
-        storyData: fallbackStory,
-        suspects: fallbackStory.suspects,
-        remainingQuestions: STARTING_QUESTIONS,
-        selectedSuspectForQuestion: null,
-      })
-      setStatusMessage(
-        `The live story generator failed, so the local demo mystery loaded instead. ${error.message}`,
-      )
+      try {
+        const fallbackStory = createLocalMystery(ASSET_POOL)
+        setGameState({
+          phase: 'INTRO',
+          storyData: fallbackStory,
+          suspects: fallbackStory.suspects,
+          remainingQuestions: STARTING_QUESTIONS,
+          selectedSuspectForQuestion: null,
+        })
+        setStatusMessage(
+          `The live story generator failed, so a local random case loaded instead. ${error.message}`,
+        )
+      } catch (fallbackError) {
+        setGameState((current) => ({ ...current, phase: 'INTRO' }))
+        setStatusMessage(fallbackError.message)
+      }
     }
   }
 
@@ -126,7 +131,11 @@ function GameContainer() {
         ],
       }))
     } catch (error) {
-      const fallback = createMockInterviewAnswer(selectedSuspect, question)
+      const fallback = createMockInterviewAnswer(
+        selectedSuspect,
+        question,
+        gameState.storyData,
+      )
       setQuestionHistory((current) => ({
         ...current,
         [suspectId]: [
@@ -200,6 +209,20 @@ function GameContainer() {
     )
   }
 
+  if (!gameState.storyData) {
+    return (
+      <main className="loading-screen">
+        <h1>Asset setup needed</h1>
+        <p>{statusMessage || 'Add at least one place and four character assets.'}</p>
+        <button className="primary-action" type="button" onClick={restartGame}>
+          Back to Start
+        </button>
+      </main>
+    )
+  }
+
+  const activePlaceAsset = getPlaceAsset(gameState.storyData.setting.assetKey)
+
   return (
     <main className="game-shell">
       {gameState.phase === 'INTRO' && (
@@ -213,6 +236,13 @@ function GameContainer() {
       {gameState.phase === 'PLAYING' && (
         <>
           <section className="case-header">
+            <div className="case-place-thumb">
+              {activePlaceAsset.imageUrl ? (
+                <img src={activePlaceAsset.imageUrl} alt={activePlaceAsset.label} />
+              ) : (
+                <span>{activePlaceAsset.label}</span>
+              )}
+            </div>
             <div>
               <p className="eyebrow">Investigation active</p>
               <h1>{gameState.storyData.setting.title}</h1>

@@ -138,12 +138,12 @@ async function callOpenAIApi({
   const { signal, timeoutId } = createTimeoutSignal(timeoutMs)
   const endpoint = OPENAI_API_URL
   const model = getModel()
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY
+  const apiKey = import.meta.env.OPENAI_API_KEY
 
   let response
 
   if (!apiKey) {
-    const error = new Error('VITE_OPENAI_API_KEY is empty.')
+    const error = new Error('OPENAI_API_KEY is empty.')
     error.status = 'CONFIG'
     error.statusText = 'Missing API key'
     error.model = model
@@ -229,9 +229,9 @@ export async function generateStory(assetPool) {
       ...story,
       apiDebug: {
         source: 'local-mock',
-        reason: import.meta.env.VITE_OPENAI_API_KEY
+        reason: import.meta.env.OPENAI_API_KEY
           ? 'VITE_USE_MOCKS is not set to false.'
-          : 'VITE_OPENAI_API_KEY is empty.',
+          : 'OPENAI_API_KEY is empty.',
         parsedStory: story,
       },
     }

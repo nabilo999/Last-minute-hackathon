@@ -30,6 +30,7 @@ function createAssetRegistry(modules) {
         key,
         {
           key,
+          filename,
           label: humanizeFilename(filename),
           imageUrl,
         },

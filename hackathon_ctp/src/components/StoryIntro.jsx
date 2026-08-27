@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
+const STORY_REVEAL_INTERVAL_MS = 14
+const STORY_REVEAL_CHARS_PER_TICK = 2
+
 function StoryIntro({ storyData, onBegin }) {
   const storyText = useMemo(
     () =>
@@ -17,8 +20,10 @@ function StoryIntro({ storyData, onBegin }) {
     if (isComplete) return undefined
 
     const timeoutId = window.setTimeout(() => {
-      setVisibleLength((current) => Math.min(current + 2, storyText.length))
-    }, 22)
+      setVisibleLength((current) =>
+        Math.min(current + STORY_REVEAL_CHARS_PER_TICK, storyText.length),
+      )
+    }, STORY_REVEAL_INTERVAL_MS)
 
     return () => window.clearTimeout(timeoutId)
   }, [isComplete, storyText.length, visibleLength])

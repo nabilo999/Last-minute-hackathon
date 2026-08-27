@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import EndScreen from './EndScreen.jsx'
+import GameSetupModal from './GameSetupModal.jsx'
 import QuestionModal from './QuestionModal.jsx'
 import StoryIntro from './StoryIntro.jsx'
 import SuspectGrid from './SuspectGrid.jsx'
@@ -14,6 +15,7 @@ const createInitialState = () => ({
   storyData: null,
   suspects: [],
   remainingQuestions: STARTING_QUESTIONS,
+  difficulty: { key: 'easy', label: 'Easy', questions: STARTING_QUESTIONS },
   selectedSuspectForQuestion: null,
 })
 
@@ -38,6 +40,7 @@ function GameContainer() {
   const [questionHistory, setQuestionHistory] = useState({})
   const [isAnswering, setIsAnswering] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
+  const [isSetupOpen, setIsSetupOpen] = useState(false)
 
   const activeSuspects = useMemo(
     () => gameState.suspects.filter((suspect) => !suspect.isEliminated),
@@ -48,20 +51,27 @@ function GameContainer() {
     (suspect) => suspect.id === gameState.selectedSuspectForQuestion,
   )
 
-  async function startGame() {
+  async function startGame({ placeKey, difficulty }) {
+    const selectedAssetPool = {
+      ...ASSET_POOL,
+      places: ASSET_POOL.places.filter((place) => place.key === placeKey),
+    }
+
     setHasStarted(true)
+    setIsSetupOpen(false)
     setStatusMessage('Generating a case file...')
     setGameState({ ...createInitialState(), phase: 'LOADING' })
 
     try {
-      const story = await generateStory(ASSET_POOL)
+      const story = await generateStory(selectedAssetPool)
       await copyStoryDebugToClipboard(story)
 
       setGameState({
         phase: 'INTRO',
         storyData: story,
         suspects: story.suspects,
-        remainingQuestions: STARTING_QUESTIONS,
+        remainingQuestions: difficulty.questions,
+        difficulty,
         selectedSuspectForQuestion: null,
       })
       setStatusMessage('')
@@ -69,7 +79,7 @@ function GameContainer() {
       console.error('Story generation failed:', error)
 
       try {
-        const fallbackStory = createLocalMystery(ASSET_POOL)
+        const fallbackStory = createLocalMystery(selectedAssetPool)
         const clipboardMessage = await copyStoryDebugToClipboard({
           ...fallbackStory,
           apiDebug: {
@@ -83,7 +93,8 @@ function GameContainer() {
           phase: 'INTRO',
           storyData: fallbackStory,
           suspects: fallbackStory.suspects,
-          remainingQuestions: STARTING_QUESTIONS,
+          remainingQuestions: difficulty.questions,
+          difficulty,
           selectedSuspectForQuestion: null,
         })
         setStatusMessage(
@@ -191,7 +202,7 @@ function GameContainer() {
       return
     }
 
-    if (activeSuspects.length <= 2) {
+    if (gameState.difficulty.key === 'hard' || activeSuspects.length <= 2) {
       setGameState((current) => ({ ...current, phase: 'GAME_OVER' }))
       return
     }
@@ -218,9 +229,19 @@ function GameContainer() {
         <div className="landing-content">
           <h1>Murder Mystery</h1>
           <p className="team-name">Team Last Minute</p>
-          <button className="primary-action" type="button" onClick={startGame}>
+          <button
+            className="primary-action"
+            type="button"
+            onClick={() => setIsSetupOpen(true)}
+          >
             Start
           </button>
+          {isSetupOpen && (
+            <GameSetupModal
+              onClose={() => setIsSetupOpen(false)}
+              onStart={startGame}
+            />
+          )}
         </div>
       </main>
     )

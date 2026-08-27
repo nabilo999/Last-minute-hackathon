@@ -5,34 +5,147 @@ const DEFAULT_MODEL = 'gpt-4.1-mini'
 const STORY_TIMEOUT_MS = 20000
 const INTERVIEW_TIMEOUT_MS = 12000
 
-const STORY_GENERATOR_PROMPT = `You are a murder mystery story engine for a short web game.
-Return JSON only with this exact shape:
+const STORY_GENERATOR_PROMPT = `You are a murder mystery story designer for a short, replay able web game.
+
+Generate a believable, logically solvable murder mystery designed to be solved by interviewing exactly 4 suspects in about 3 minutes. The overall story context MUST be exactly 2-3 sentences.
+
+Return JSON ONLY. No Markdown, code fences, commentary, or extra fields.
+
+EXACT JSON SHAPE:
 {
-  "setting": { "title": string, "description": string, "assetKey": string },
-  "victim": { "name": string, "details": string, "lastSeen": string },
-  "secretMurdererId": string,
-  "hiddenSolutionLogic": string,
-  "solutionExplanation": string,
-  "suspects": [
-    {
-      "id": string,
-      "name": string,
-      "role": string,
-      "assetKey": string,
-      "initialStatement": string,
-      "secretMotive": string,
-      "isKiller": boolean,
-      "isEliminated": false
-    }
-  ]
+  "setting": {
+    "title": "string",
+    "description": "string",
+    "assetKey": "string"
+  },
+  "victim": {
+    "name": "string",
+    "details": "string",
+    "lastSeen": "string"
+  },
+  "secretMurdererId": "string",
+  "hiddenSolutionLogic": "string",
+  "solutionExplanation": "string",
+  "suspects": [
+    {
+      "id": "string",
+      "name": "string",
+      "role": "string",
+      "assetKey": "string",
+      "initialStatement": "string",
+      "secretMotive": "string",
+      "isKiller": true,
+      "isEliminated": false
+    }
+  ]
 }
-First pick exactly 1 place from the provided places list and set setting.assetKey to that place key.
-Then pick exactly 4 distinct characters from the provided characters list that plausibly fit that place.
-Every suspect.assetKey must be one of the selected character keys. Do not invent new asset keys.
-Mark exactly 1 suspect as the killer and set secretMurdererId to that suspect's id.
-Give the killer a subtle logical contradiction in their timeline or motive.
-Give the other 3 suspects shady but innocent secrets so everyone seems suspicious.
-Make the case different each time: vary names, victim, motive, clue, and timeline.`
+
+ASSETS:
+- Select exactly 1 place from the provided places list.
+- setting.assetKey MUST exactly match a provided place key.
+- Select exactly 4 DIFFERENT characters from the provided characters list.
+- Every suspect.assetKey MUST exactly match one of those 4 character keys.
+- Never invent asset keys.
+
+SETTING:
+Create a contained location where the victim and all 4 suspects could realistically be present during the murder.
+
+Good examples:
+
+a small hotel
+a dinner night
+a school
+a theater
+a small office
+
+VICTIM:
+Give the victim a believable identity, relationships, and reason for conflict with multiple suspects. Include a clear approximate time they were last seen alive.
+
+SUSPECTS:
+Create exactly 4 distinct suspects with different personalities, relationships, motives, and reasons for being present.
+
+KILLER:
+Exactly ONE suspect has "isKiller": true. The other 3 MUST be false.
+secretMurdererId MUST equal the killer's id.
+
+The killer must have:
+- a believable motive
+- a realistic opportunity
+- a plausible initial alibi
+- a subtle contradiction in their story
+- a reason to lie
+
+The contradiction must be discoverable through interviews by connecting at least TWO pieces of information. It must not be an obvious confession.
+
+INNOCENT SUSPECTS:
+The other 3 suspects are genuinely innocent.
+
+Each must have a suspicious secret that gives them a reason to lie, such as theft, blackmail, affair, debt, secret meeting, or hiding unrelated evidence.
+
+Their secrets MUST NOT involve the murder. Each must be logically clearable.
+
+INTERVIEWS:
+Each initialStatement MUST be exactly 1 sentence.
+
+Write it as a natural first response to a detective, not as a summary of the character.
+
+The statement MUST:
+- mention the suspect's specific relationship with the victim
+- give a concrete reason they were at the location
+- mention a specific time, place, person, or action from that evening
+- provide a believable alibi or account of their movements
+- include one concrete detail that can be challenged or investigated later
+
+Avoid vague phrases like "we had a complicated relationship," "I was nowhere near the scene," or "I had nothing to do with it."
+
+Do not directly reveal the suspect's secret, the killer, or the solution.
+Make each suspect's statement sound different and conversational.
+
+
+
+FAIR PLAY:
+The killer must be identifiable through logical deduction from the generated information and interviews.
+
+Do not rely on:
+- guessing
+- supernatural information
+- unknown characters
+- impossible timelines
+- arbitrary coincidences
+- information only the narrator knows
+- a required confession
+
+TIMELINE:
+Keep the murder timeline simple and physically possible. The killer's opportunity and contradiction must fit the timeline.
+
+hiddenSolutionLogic must explain:
+- killer
+- motive
+- opportunity
+- alibi
+- contradiction
+- why each other suspect is innocent
+
+solutionExplanation should be a short player-facing explanation of how the killer was identified.
+
+REPLAYABILITY:
+Vary the setting, victim, killer, motive, murder circumstances, clues, timeline, and innocent secrets between generations. Avoid repeating the same formula.
+
+Before returning, silently verify:
+- exactly 4 suspects
+- exactly 1 killer
+- 3 innocent suspects
+- unique suspect ids
+- 4 unique character assetKeys
+- all assetKeys came from the provided lists
+- secretMurdererId matches the killer
+- all isEliminated values are false
+- timeline is consistent
+- killer's contradiction is discoverable
+- innocent suspects are actually innocent
+- the case is solvable without guessing
+
+Return ONLY the JSON.`
 
 function shouldUseMocks() {
   return import.meta.env.VITE_USE_MOCKS === 'true'

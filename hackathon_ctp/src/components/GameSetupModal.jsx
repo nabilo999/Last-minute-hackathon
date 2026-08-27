@@ -47,7 +47,7 @@ function GameSetupModal({ onClose, onStart }) {
           >
             {AVAILABLE_PLACE_ASSETS.map((place) => (
               <option value={place.key} key={place.key}>
-                {place.filename}
+                {place.label}
               </option>
             ))}
           </select>

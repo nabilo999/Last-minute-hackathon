@@ -232,13 +232,13 @@
 
 .suspect-actions {
   position: absolute;
-  bottom: 54px;
+  top: 50%;
   left: 50%;
   display: flex;
   gap: 8px;
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, 12px);
+  transform: translate(-50%, calc(-50% + 12px));
   transition:
     opacity 160ms ease,
     transform 160ms ease;
@@ -248,7 +248,7 @@
 .suspect-card:not(.is-eliminated):focus-within .suspect-actions {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, 0);
+  transform: translate(-50%, -50%);
 }
 
 .cleared-label {

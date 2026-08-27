@@ -1,5 +1,5 @@
 # AI integration
-The LLM used is Gemini Flash. The AI integrated itself using a key and was prompted to make a short murder mystery web game. The JSON fields are the setting, the victim, a secret Murderer ID, the solution logic, the solution explanation, and a list of suspects. The LLM is tasked with giving each suspect a secret, but only the murderer as a contradiction in their timeline.
+The LLM provider is OpenAI. The app uses a local OpenAI API key and prompts the model to make a short murder mystery web game. The JSON fields are the setting, the victim, a secret Murderer ID, the solution logic, the solution explanation, and a list of suspects. The LLM is tasked with giving each suspect a secret, but only the murderer has a contradiction in their timeline.
 # End Screen
 On the end screen the player will find out if they won or if the killer got away. The solution explanation from the LLM will be displayed, along with the killer's name. On this screen the player can also choose to start a new game.
 # Game 

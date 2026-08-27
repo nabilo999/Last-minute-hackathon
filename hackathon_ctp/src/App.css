@@ -319,6 +319,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   background: var(--surface);
+  white-space: pre-wrap;
 }
 
 .chat-line span {
@@ -419,6 +420,7 @@
   border-radius: 6px;
   background: #fff6df;
   color: #6b4b10;
+  white-space: pre-wrap;
 }
 
 .eyebrow {

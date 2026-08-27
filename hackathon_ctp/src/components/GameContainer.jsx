@@ -17,6 +17,21 @@ const createInitialState = () => ({
   selectedSuspectForQuestion: null,
 })
 
+async function copyStoryDebugToClipboard(story) {
+  const debugPayload = story.apiDebug ?? {
+    source: 'unknown',
+    parsedStory: story,
+  }
+
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(debugPayload, null, 2))
+    return `Story generation output copied to clipboard. Source: ${debugPayload.source}.`
+  } catch (error) {
+    console.error('Failed to copy story output to clipboard:', error)
+    return `Story generation output could not be copied to clipboard. Source: ${debugPayload.source}. ${error.message}`
+  }
+}
+
 function GameContainer() {
   const [hasStarted, setHasStarted] = useState(false)
   const [gameState, setGameState] = useState(createInitialState)
@@ -40,6 +55,8 @@ function GameContainer() {
 
     try {
       const story = await generateStory(ASSET_POOL)
+      const clipboardMessage = await copyStoryDebugToClipboard(story)
+
       setGameState({
         phase: 'INTRO',
         storyData: story,
@@ -47,10 +64,21 @@ function GameContainer() {
         remainingQuestions: STARTING_QUESTIONS,
         selectedSuspectForQuestion: null,
       })
-      setStatusMessage('')
+      setStatusMessage(clipboardMessage)
     } catch (error) {
+      console.error('Story generation failed:', error)
+
       try {
         const fallbackStory = createLocalMystery(ASSET_POOL)
+        const clipboardMessage = await copyStoryDebugToClipboard({
+          ...fallbackStory,
+          apiDebug: {
+            source: 'local-fallback',
+            reason: error.message,
+            parsedStory: fallbackStory,
+          },
+        })
+
         setGameState({
           phase: 'INTRO',
           storyData: fallbackStory,
@@ -59,9 +87,10 @@ function GameContainer() {
           selectedSuspectForQuestion: null,
         })
         setStatusMessage(
-          `The live story generator failed, so a local random case loaded instead. ${error.message}`,
+          `The live story generator failed, so a local random case loaded instead. ${clipboardMessage}\n\n${error.message}`,
         )
       } catch (fallbackError) {
+        console.error('Local story fallback failed:', fallbackError)
         setGameState((current) => ({ ...current, phase: 'INTRO' }))
         setStatusMessage(fallbackError.message)
       }
@@ -131,6 +160,8 @@ function GameContainer() {
         ],
       }))
     } catch (error) {
+      console.error('Suspect interview failed:', error)
+
       const fallback = createMockInterviewAnswer(
         selectedSuspect,
         question,
@@ -142,7 +173,7 @@ function GameContainer() {
           ...(current[suspectId] ?? nextHistory),
           {
             speaker: 'suspect',
-            text: `${fallback} (Interview API fallback: ${error.message})`,
+            text: `${fallback}\n\nInterview API fallback:\n${error.message}`,
           },
         ],
       }))

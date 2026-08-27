@@ -5,6 +5,7 @@ function SuspectCard({ suspect, onAsk, onVote, canAsk }) {
 
   return (
     <article className={`suspect-card ${suspect.isEliminated ? 'is-eliminated' : ''}`}>
+      <p className="statement-bubble">{suspect.initialStatement}</p>
       <div className={`asset-box asset-${suspect.assetKey}`}>
         {asset.imageUrl ? (
           <img src={asset.imageUrl} alt={asset.label} />
@@ -13,9 +14,7 @@ function SuspectCard({ suspect, onAsk, onVote, canAsk }) {
         )}
       </div>
       <div className="suspect-details">
-        <p className="eyebrow">{suspect.role}</p>
         <h2>{suspect.name}</h2>
-        <p>{suspect.initialStatement}</p>
       </div>
       <div className="suspect-actions">
         <button
@@ -32,7 +31,7 @@ function SuspectCard({ suspect, onAsk, onVote, canAsk }) {
           disabled={suspect.isEliminated}
           onClick={() => onVote(suspect.id)}
         >
-          Accuse
+          Vote
         </button>
       </div>
       {suspect.isEliminated && <p className="cleared-label">Cleared</p>}

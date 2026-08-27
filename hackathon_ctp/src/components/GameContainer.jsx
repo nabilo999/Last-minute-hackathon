@@ -55,7 +55,7 @@ function GameContainer() {
 
     try {
       const story = await generateStory(ASSET_POOL)
-      const clipboardMessage = await copyStoryDebugToClipboard(story)
+      await copyStoryDebugToClipboard(story)
 
       setGameState({
         phase: 'INTRO',
@@ -64,7 +64,7 @@ function GameContainer() {
         remainingQuestions: STARTING_QUESTIONS,
         selectedSuspectForQuestion: null,
       })
-      setStatusMessage(clipboardMessage)
+      setStatusMessage('')
     } catch (error) {
       console.error('Story generation failed:', error)
 
@@ -216,14 +216,10 @@ function GameContainer() {
     return (
       <main className="landing-screen">
         <div className="landing-content">
-          <p className="eyebrow">AI murder mystery MVP</p>
-          <h1>Cold Case Club</h1>
-          <p className="landing-copy">
-            Generate a locked-room mystery, question four suspects, and accuse
-            the killer before your leads run dry.
-          </p>
+          <h1>Murder Mystery</h1>
+          <p className="team-name">Team Last Minute</p>
           <button className="primary-action" type="button" onClick={startGame}>
-            Start Investigation
+            Start
           </button>
         </div>
       </main>
@@ -255,35 +251,27 @@ function GameContainer() {
   const activePlaceAsset = getPlaceAsset(gameState.storyData.setting.assetKey)
 
   return (
-    <main className="game-shell">
+    <main
+      className="game-shell"
+      style={
+        gameState.phase === 'PLAYING' && activePlaceAsset.imageUrl
+          ? { backgroundImage: `url(${activePlaceAsset.imageUrl})` }
+          : undefined
+      }
+    >
       {gameState.phase === 'INTRO' && (
         <StoryIntro
           storyData={gameState.storyData}
           onBegin={beginInvestigation}
-          statusMessage={statusMessage}
         />
       )}
 
       {gameState.phase === 'PLAYING' && (
         <>
-          <section className="case-header">
-            <div className="case-place-thumb">
-              {activePlaceAsset.imageUrl ? (
-                <img src={activePlaceAsset.imageUrl} alt={activePlaceAsset.label} />
-              ) : (
-                <span>{activePlaceAsset.label}</span>
-              )}
-            </div>
-            <div>
-              <p className="eyebrow">Investigation active</p>
-              <h1>{gameState.storyData.setting.title}</h1>
-              <p>{gameState.storyData.setting.description}</p>
-            </div>
-            <div className="question-counter">
-              <span>{gameState.remainingQuestions}</span>
-              questions left
-            </div>
-          </section>
+          <div className="question-counter">
+            <span>{gameState.remainingQuestions}</span>
+            questions left
+          </div>
 
           {statusMessage && <p className="status-message">{statusMessage}</p>}
 

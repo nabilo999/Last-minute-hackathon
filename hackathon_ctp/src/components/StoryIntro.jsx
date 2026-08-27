@@ -1,36 +1,37 @@
-import { getPlaceAsset } from '../data/assets.js'
+import { useEffect, useMemo, useState } from 'react'
 
-function StoryIntro({ storyData, onBegin, statusMessage }) {
-  const placeAsset = getPlaceAsset(storyData.setting.assetKey)
+function StoryIntro({ storyData, onBegin }) {
+  const storyText = useMemo(
+    () =>
+      [
+        storyData.setting.description,
+        storyData.victim.details,
+        storyData.victim.lastSeen,
+      ].join(' '),
+    [storyData],
+  )
+  const [visibleLength, setVisibleLength] = useState(0)
+  const isComplete = visibleLength >= storyText.length
+
+  useEffect(() => {
+    if (isComplete) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setVisibleLength((current) => Math.min(current + 2, storyText.length))
+    }, 22)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [isComplete, storyText.length, visibleLength])
 
   return (
     <section className="intro-layout">
-      <div className="place-hero">
-        {placeAsset.imageUrl ? (
-          <img src={placeAsset.imageUrl} alt={placeAsset.label} />
-        ) : (
-          <span>{placeAsset.label}</span>
-        )}
-      </div>
+      <p className="story-reveal">{storyText.slice(0, visibleLength)}</p>
 
-      <div className="intro-copy">
-        <p className="eyebrow">Case file ready</p>
-        <h1>{storyData.setting.title}</h1>
-        <p>{storyData.setting.description}</p>
-      </div>
-
-      <div className="victim-panel">
-        <p className="eyebrow">Victim</p>
-        <h2>{storyData.victim.name}</h2>
-        <p>{storyData.victim.details}</p>
-        <p className="evidence-note">{storyData.victim.lastSeen}</p>
-      </div>
-
-      {statusMessage && <p className="status-message">{statusMessage}</p>}
-
-      <button className="primary-action" type="button" onClick={onBegin}>
-        Begin Investigation
-      </button>
+      {isComplete && (
+        <button className="primary-action" type="button" onClick={onBegin}>
+          Start Investigation
+        </button>
+      )}
     </section>
   )
 }

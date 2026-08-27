@@ -1,7 +1,16 @@
 import { createLocalMystery, createMockInterviewAnswer } from '../data/mockMystery.js'
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
-const DEFAULT_MODEL = 'gemini-2.5-flash'
+const DEFAULT_MODEL = 'gemini-3.7-flash'
+const FALLBACK_MODELS = [
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-flash-latest',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+]
+const FALLBACK_STATUS_CODES = new Set([403, 404])
 
 const STORY_GENERATOR_PROMPT = `You are a murder mystery story engine for a short web game.
 Return JSON only with this exact shape:
@@ -38,6 +47,12 @@ function shouldUseMocks() {
 
 function getModel() {
   return import.meta.env.VITE_GEMINI_MODEL || DEFAULT_MODEL
+}
+
+function getModelCandidates() {
+  const preferredModel = getModel().replace(/^models\//, '')
+
+  return [...new Set([preferredModel, ...FALLBACK_MODELS])]
 }
 
 function readOutputText(payload) {
@@ -106,8 +121,26 @@ function normalizeGeneratedStory(story, assetPool) {
   }
 }
 
-async function callGeminiApi({ systemInstruction, prompt, responseMimeType }) {
-  const model = getModel()
+function createGeminiErrorMessage({ error, attemptedModels }) {
+  const triedModels = attemptedModels.join(', ')
+
+  if (error.status === 403) {
+    return `Gemini access denied with ${error.model}. Check that VITE_GEMINI_API_KEY is a Google AI Studio key and that the key's project has Gemini API access. Tried models: ${triedModels}`
+  }
+
+  if (error.status === 404) {
+    return `Gemini model not found or unsupported for generateContent. Tried models: ${triedModels}`
+  }
+
+  return `${error.message}. Tried models: ${triedModels}`
+}
+
+async function callGeminiApiWithModel({
+  model,
+  systemInstruction,
+  prompt,
+  responseMimeType,
+}) {
   const response = await fetch(`${GEMINI_API_URL}/${model}:generateContent`, {
     method: 'POST',
     headers: {
@@ -131,10 +164,48 @@ async function callGeminiApi({ systemInstruction, prompt, responseMimeType }) {
   })
 
   if (!response.ok) {
-    throw new Error(`Gemini request failed with ${response.status}`)
+    let details = ''
+
+    try {
+      const errorPayload = await response.json()
+      details = errorPayload.error?.message ? `: ${errorPayload.error.message}` : ''
+    } catch {
+      details = ''
+    }
+
+    const error = new Error(`Gemini request failed with ${response.status}${details}`)
+    error.status = response.status
+    error.model = model
+    throw error
   }
 
   return response.json()
+}
+
+async function callGeminiApi(options) {
+  const modelCandidates = getModelCandidates()
+  const attemptedModels = []
+  let lastError = null
+
+  for (const model of modelCandidates) {
+    attemptedModels.push(model)
+
+    try {
+      return await callGeminiApiWithModel({ ...options, model })
+    } catch (error) {
+      lastError = error
+
+      if (
+        !FALLBACK_STATUS_CODES.has(error.status) ||
+        model === modelCandidates.at(-1)
+      ) {
+        error.message = createGeminiErrorMessage({ error, attemptedModels })
+        throw error
+      }
+    }
+  }
+
+  throw new Error(createGeminiErrorMessage({ error: lastError, attemptedModels }))
 }
 
 export async function generateStory(assetPool) {

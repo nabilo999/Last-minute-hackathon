@@ -19,21 +19,6 @@ const createInitialState = () => ({
   selectedSuspectForQuestion: null,
 })
 
-async function copyStoryDebugToClipboard(story) {
-  const debugPayload = story.apiDebug ?? {
-    source: 'unknown',
-    parsedStory: story,
-  }
-
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(debugPayload, null, 2))
-    return `Story generation output copied to clipboard. Source: ${debugPayload.source}.`
-  } catch (error) {
-    console.error('Failed to copy story output to clipboard:', error)
-    return `Story generation output could not be copied to clipboard. Source: ${debugPayload.source}. ${error.message}`
-  }
-}
-
 function GameContainer() {
   const [hasStarted, setHasStarted] = useState(false)
   const [gameState, setGameState] = useState(createInitialState)
@@ -64,7 +49,6 @@ function GameContainer() {
 
     try {
       const story = await generateStory(selectedAssetPool)
-      await copyStoryDebugToClipboard(story)
 
       setGameState({
         phase: 'INTRO',
@@ -80,14 +64,6 @@ function GameContainer() {
 
       try {
         const fallbackStory = createLocalMystery(selectedAssetPool)
-        const clipboardMessage = await copyStoryDebugToClipboard({
-          ...fallbackStory,
-          apiDebug: {
-            source: 'local-fallback',
-            reason: error.message,
-            parsedStory: fallbackStory,
-          },
-        })
 
         setGameState({
           phase: 'INTRO',
@@ -97,13 +73,11 @@ function GameContainer() {
           difficulty,
           selectedSuspectForQuestion: null,
         })
-        setStatusMessage(
-          `The live story generator failed, so a local random case loaded instead. ${clipboardMessage}\n\n${error.message}`,
-        )
+        setStatusMessage('')
       } catch (fallbackError) {
         console.error('Local story fallback failed:', fallbackError)
         setGameState((current) => ({ ...current, phase: 'INTRO' }))
-        setStatusMessage(fallbackError.message)
+        setStatusMessage('')
       }
     }
   }
@@ -184,7 +158,7 @@ function GameContainer() {
           ...(current[suspectId] ?? nextHistory),
           {
             speaker: 'suspect',
-            text: `${fallback}\n\nInterview API fallback:\n${error.message}`,
+            text: fallback,
           },
         ],
       }))
@@ -261,7 +235,7 @@ function GameContainer() {
     return (
       <main className="loading-screen">
         <h1>Asset setup needed</h1>
-        <p>{statusMessage || 'Add at least one place and four character assets.'}</p>
+        <p>Add at least one place and four character assets.</p>
         <button className="primary-action" type="button" onClick={restartGame}>
           Back to Start
         </button>
